@@ -71,7 +71,7 @@ define(['durandal/system', 'durandal/app', 'durandal/composition', 'durandal/act
      */
     MessageBox.defaultOptions = ['Ok'];
 
-    
+
     MessageBox.defaultSettings = { buttonClass: "btn btn-default", primaryButtonClass: "btn-primary autofocus", secondaryButtonClass: "", "class": "modal-content messageBox", style: null };
 
     /**
@@ -308,39 +308,35 @@ define(['durandal/system', 'durandal/app', 'durandal/composition', 'durandal/act
                     var dialogActivator = activator.create();
 
                     dialogActivator.activateItem(instance, activationData).then(function (success) {
-                        if (success) {
-                            var theDialog = instance.__dialog__ = {
-                                owner: instance,
-                                context: dialogContext,
-                                activator: dialogActivator,
-                                close: function () {
-                                    var args = arguments;
-                                    dialogActivator.deactivateItem(instance, true).then(function (closeSuccess) {
-                                        if (closeSuccess) {
-                                            dialogCount(dialogCount() - 1);
-                                            dialogContext.removeHost(theDialog);
-                                            delete instance.__dialog__;
+                        var theDialog = instance.__dialog__ = {
+                            owner: instance,
+                            context: dialogContext,
+                            activator: dialogActivator,
+                            close: function () {
+                                var args = arguments;
+                                dialogActivator.deactivateItem(instance, true).then(function (closeSuccess) {
+                                    dialogCount(dialogCount() - 1);
+                                    dialogContext.removeHost(theDialog);
+                                    delete instance.__dialog__;
 
-                                            if (args.length === 0) {
-                                                dfd.resolve();
-                                            } else if (args.length === 1) {
-                                                dfd.resolve(args[0]);
-                                            } else {
-                                                dfd.resolve.apply(dfd, args);
-                                            }
-                                        }
-                                    });
-                                }
-                            };
+                                    if (args.length === 0) {
+                                        dfd.resolve();
+                                    } else if (args.length === 1) {
+                                        dfd.resolve(args[0]);
+                                    } else {
+                                        dfd.resolve.apply(dfd, args);
+                                    }
+                                });
+                            }
+                        };
 
-                            theDialog.settings = that.createCompositionSettings(instance, dialogContext);
-                            dialogContext.addHost(theDialog);
+                        theDialog.settings = that.createCompositionSettings(instance, dialogContext);
+                        dialogContext.addHost(theDialog);
 
-                            dialogCount(dialogCount() + 1);
-                            composition.compose(theDialog.host, theDialog.settings);
-                        } else {
-                            dfd.resolve(false);
-                        }
+                        dialogCount(dialogCount() + 1);
+                        composition.compose(theDialog.host, theDialog.settings);
+                    }, function (error) {
+                        dfd.reject(error);
                     });
                 });
             }).promise();
@@ -521,7 +517,7 @@ define(['durandal/system', 'durandal/app', 'durandal/composition', 'durandal/act
             var $view = $(view),
                 $window = $(window);
 
-            //We will clear and then set width for dialogs without width set 
+            //We will clear and then set width for dialogs without width set
             if (!$view.data("predefinedWidth")) {
                 $view.css({ width: '' }); //Reset width
             }

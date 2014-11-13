@@ -259,7 +259,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
             router.trigger('router:navigation:complete', instance, instruction, router);
         }
 
-        function cancelNavigation(instance, instruction) {
+        function cancelNavigation(instance, instruction, error) {
             system.log('Navigation Cancelled');
 
             router.activeInstruction(currentInstruction);
@@ -269,7 +269,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
             isProcessing(false);
             rootRouter.explicitNavigation = false;
             rootRouter.navigatingBack = false;
-            router.trigger('router:navigation:cancelled', instance, instruction, router);
+            router.trigger('router:navigation:cancelled', instance, instruction, router, error);
         }
 
         function redirect(url) {
@@ -289,7 +289,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                 canDeactivate: !router.parent
             };
 
-            activator.activateItem(instance, instruction.params, options).then(function(succeeded) {
+            activator.activateItem(instance, instruction.params, options).then(function() {
                 var previousActivation = currentActivation;
                 var withChild = hasChildRouter(instance, router);
                 var mode = '';
@@ -332,10 +332,8 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                 if (activator.settings.lifecycleData && activator.settings.lifecycleData.redirect){
                     redirect(activator.settings.lifecycleData.redirect);
                 } else {
-                    cancelNavigation(instance, instruction);
+                    cancelNavigation(instance, instruction, error);
                 }
-            }).fail(function(err){
-                system.error(err);
             });
         }
 
@@ -351,15 +349,13 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
             if (resultOrPromise || resultOrPromise === '') {
                 if (resultOrPromise.then) {
                     resultOrPromise.then(function(result) {
-                        if (result) {
-                            if (system.isString(result)) {
-                                redirect(result);
-                            } else {
-                                activateRoute(activator, instance, instruction);
-                            }
+                        if (system.isString(result)) {
+                            redirect(result);
                         } else {
-                            cancelNavigation(instance, instruction);
+                            activateRoute(activator, instance, instruction);
                         }
+                    }, function (error) {
+                        cancelNavigation(instance, instruction, error);
                     });
                 } else {
                     if (system.isString(resultOrPromise)) {
@@ -495,7 +491,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                     queryParams:paramInfo.queryParams
                 });
             });
-        };
+        }
 
         function mapRoute(config) {
             if(system.isArray(config.route)){
