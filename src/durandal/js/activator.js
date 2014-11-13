@@ -66,28 +66,28 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                 result = item.deactivate(close);
             } catch(error) {
                 system.log('ERROR: ' + error.message, error);
-                dfd.resolve(false);
+                dfd.reject();
                 return;
             }
 
             if (result && result.then) {
                 result.then(function() {
                     settings.afterDeactivate(item, close, setter);
-                    dfd.resolve(true);
-                }, function(reason) {
+                    dfd.resolve();
+                }, function (reason) {
                     system.log(reason);
-                    dfd.resolve(false);
+                    dfd.reject(reason);
                 });
             } else {
                 settings.afterDeactivate(item, close, setter);
-                dfd.resolve(true);
+                dfd.resolve();
             }
         } else {
             if (item) {
                 settings.afterDeactivate(item, close, setter);
             }
 
-            dfd.resolve(true);
+            dfd.resolve();
         }
     }
 
@@ -332,7 +332,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                 }
 
                 computed.canDeactivateItem(currentItem, settings.closeOnDeactivate, options).then(function (canDeactivate) {
-                    computed.canActivateItem(newItem, newActivationData).then(function (canActivate) {
+                    computed.canActivateItem(newItem, newActivationData).then(function () {
                         system.defer(function (dfd2) {
                             deactivate(currentItem, settings.closeOnDeactivate, settings, dfd2);
                         }).promise().then(function () {
@@ -490,23 +490,14 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                         var list = items();
                         var results = [];
 
-                        function finish() {
-                            for (var j = 0; j < results.length; j++) {
-                                if (!results[j]) {
-                                    dfd.resolve(false);
-                                    return;
-                                }
-                            }
-
-                            dfd.resolve(true);
-                        }
-
                         for (var i = 0; i < list.length; i++) {
                             computed.canDeactivateItem(list[i], close).then(function (result) {
                                 results.push(result);
                                 if (results.length == list.length) {
-                                    finish();
+                                    dfd.resolve();
                                 }
+                            }, function (error) {
+                                dfd.reject(error);
                             });
                         }
                     }).promise();
