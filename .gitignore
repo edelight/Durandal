@@ -9,6 +9,8 @@ build/
 _ReSharper.*/
 .idea*
 *.resharper
+*.sublime-project
+*.sublime-workspace
 resharper.settings.xml
 *.user
 [Bb]uild*

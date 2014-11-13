@@ -91,33 +91,37 @@ define(['durandal/system', 'knockout'], function (system, ko) {
         }
     }
 
-    function activate(newItem, activeItem, callback, activationData) {
-        var result;
+    function activate(newItem, activeItem, activationData) {
 
-        if(newItem && newItem.activate) {
-            system.log('Activating', newItem);
+        return system.defer(function (dfd) {
 
-            try {
-                result = invoke(newItem, 'activate', activationData);
-            } catch(error) {
-                system.log('ERROR: ' + error.message, error);
-                callback(false);
-                return;
+            var result;
+
+            if(newItem && newItem.activate) {
+                system.log('Activating', newItem);
+
+                try {
+                    result = invoke(newItem, 'activate', activationData);
+                } catch(error) {
+                    system.log('ERROR: ' + error.message, error);
+                    dfd.reject(error);
+                    return;
+                }
             }
-        }
 
-        if(result && result.then) {
-            result.then(function() {
+            if(result && result.then) {
+                result.then(function() {
+                    activeItem(newItem);
+                    dfd.resolve();
+                }, function(reason) {
+                    system.log('ERROR: ' + reason.message, reason);
+                    dfd.reject(reason);
+                });
+            } else {
                 activeItem(newItem);
-                callback(true);
-            }, function(reason) {
-                system.log('ERROR: ' + reason.message, reason);
-                callback(false);
-            });
-        } else {
-            activeItem(newItem);
-            callback(true);
-        }
+                dfd.resolve();
+            }
+        });
     }
 
     function canDeactivateItem(item, close, settings, options) {
@@ -132,7 +136,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                         resultOrPromise = item.canDeactivate(close);
                     } catch (error) {
                         system.log('ERROR: ' + error.message, error);
-                        dfd.resolve(false);
+                        dfd.reject(error);
                         return;
                     }
 
@@ -142,38 +146,36 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                             dfd.resolve(settings.interpretResponse(result));
                         }, function (reason) {
                             system.log('ERROR: ' + reason.message, reason);
-                            dfd.resolve(false);
+                            dfd.reject(reason);
                         });
                     } else {
                         settings.lifecycleData = resultOrPromise;
                         dfd.resolve(settings.interpretResponse(resultOrPromise));
                     }
                 } else {
-                    dfd.resolve(true);
+                    dfd.resolve();
                 }
             }
 
             var childActivator = settings.findChildActivator(item);
             if (childActivator) {
-                childActivator.canDeactivate().then(function(result) {
-                    if (result) {
-                        continueCanDeactivate();
-                    } else {
-                        dfd.resolve(false);
-                    }
+                childActivator.canDeactivate().then(function () {
+                    continueCanDeactivate();
+                }, function (error){
+                    dfd.reject(error);
                 });
             } else {
                 continueCanDeactivate();
             }
         }).promise();
-    };
+    }
 
     function canActivateItem(newItem, activeItem, settings, activeData, newActivationData) {
         settings.lifecycleData = null;
 
         return system.defer(function (dfd) {
             if (settings.areSameItem(activeItem(), newItem, activeData, newActivationData)) {
-                dfd.resolve(true);
+                dfd.resolve();
                 return;
             }
 
@@ -183,7 +185,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                     resultOrPromise = invoke(newItem, 'canActivate', newActivationData);
                 } catch (error) {
                     system.log('ERROR: ' + error.message, error);
-                    dfd.resolve(false);
+                    dfd.reject(error);
                     return;
                 }
 
@@ -191,19 +193,19 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                     resultOrPromise.then(function(result) {
                         settings.lifecycleData = result;
                         dfd.resolve(settings.interpretResponse(result));
-                    }, function(reason) {
+                    }, function (reason) {
                         system.log('ERROR: ' + reason.message, reason);
-                        dfd.resolve(false);
+                        dfd.reject(reason);
                     });
                 } else {
                     settings.lifecycleData = resultOrPromise;
                     dfd.resolve(settings.interpretResponse(resultOrPromise));
                 }
             } else {
-                dfd.resolve(true);
+                dfd.resolve();
             }
         }).promise();
-    };
+    }
 
     /**
      * An activator is a read/write computed observable that enforces the activation lifecycle whenever changing values.
@@ -267,12 +269,10 @@ define(['durandal/system', 'knockout'], function (system, ko) {
         computed.deactivateItem = function (item, close) {
             return system.defer(function(dfd) {
                 computed.canDeactivateItem(item, close).then(function(canDeactivate) {
-                    if (canDeactivate) {
-                        deactivate(item, close, settings, dfd, activeItem);
-                    } else {
-                        computed.notifySubscribers();
-                        dfd.resolve(false);
-                    }
+                    deactivate(item, close, settings, dfd, activeItem);
+                }, function (error){
+                    computed.notifySubscribers();
+                    dfd.reject(error);
                 });
             }).promise();
         };
@@ -302,7 +302,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
 
             return system.defer(function (dfd) {
                 if (computed.isActivating()) {
-                    dfd.resolve(false);
+                    dfd.reject();
                     return;
                 }
 
@@ -311,41 +311,39 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                 var currentItem = activeItem();
                 if (settings.areSameItem(currentItem, newItem, activeData, newActivationData)) {
                     computed.isActivating(false);
-                    dfd.resolve(true);
+                    dfd.resolve();
                     return;
                 }
 
                 computed.canDeactivateItem(currentItem, settings.closeOnDeactivate, options).then(function (canDeactivate) {
-                    if (canDeactivate) {
-                        computed.canActivateItem(newItem, newActivationData).then(function (canActivate) {
-                            if (canActivate) {
-                                system.defer(function (dfd2) {
-                                    deactivate(currentItem, settings.closeOnDeactivate, settings, dfd2);
-                                }).promise().then(function () {
-                                        newItem = settings.beforeActivate(newItem, newActivationData);
-                                        activate(newItem, activeItem, function (result) {
-                                            activeData = newActivationData;
-                                            computed.isActivating(false);
-                                            dfd.resolve(result);
-                                        }, newActivationData);
-                                    });
-                            } else {
-                                if (viaSetter) {
-                                    computed.notifySubscribers();
-                                }
-
+                    computed.canActivateItem(newItem, newActivationData).then(function (canActivate) {
+                        system.defer(function (dfd2) {
+                            deactivate(currentItem, settings.closeOnDeactivate, settings, dfd2);
+                        }).promise().then(function () {
+                            newItem = settings.beforeActivate(newItem, newActivationData);
+                            activate(newItem, activeItem, newActivationData).then(function (result) {
+                                activeData = newActivationData;
                                 computed.isActivating(false);
-                                dfd.resolve(false);
-                            }
+                                dfd.resolve(result);
+                            }, function (error) {
+                                activeData = newActivationData;
+                                computed.isActivating(false);
+                                dfd.reject(error);
+                            });
                         });
-                    } else {
+                    }, function (error) {
                         if (viaSetter) {
                             computed.notifySubscribers();
                         }
-
                         computed.isActivating(false);
-                        dfd.resolve(false);
+                        dfd.reject(error);
+                    });
+                }, function (error) {
+                    if (viaSetter) {
+                        computed.notifySubscribers();
                     }
+                    computed.isActivating(false);
+                    dfd.reject(error);
                 });
             }).promise();
         };

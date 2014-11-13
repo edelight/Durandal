@@ -290,49 +290,49 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
             };
 
             activator.activateItem(instance, instruction.params, options).then(function(succeeded) {
-                if (succeeded) {
-                    var previousActivation = currentActivation;
-                    var withChild = hasChildRouter(instance, router);
-                    var mode = '';
+                var previousActivation = currentActivation;
+                var withChild = hasChildRouter(instance, router);
+                var mode = '';
 
-                    if (router.parent) {
-                        if(!withChild) {
-                            mode = 'lastChildRouter';
-                        }
-                    } else {
-                        if (withChild) {
-                            mode = 'rootRouterWithChild';
-                        } else {
-                            mode = 'rootRouter';
-                        }
+                if (router.parent) {
+                    if(!withChild) {
+                        mode = 'lastChildRouter';
                     }
-
-                    completeNavigation(instance, instruction, mode);
-
+                } else {
                     if (withChild) {
-                        instance.router.trigger('router:route:before-child-routes', instance, instruction, router);
+                        mode = 'rootRouterWithChild';
+                    } else {
+                        mode = 'rootRouter';
+                    }
+                }
 
-                        var fullFragment = instruction.fragment;
-                        if (instruction.queryString) {
-                            fullFragment += "?" + instruction.queryString;
-                        }
+                completeNavigation(instance, instruction, mode);
 
-                        instance.router.loadUrl(fullFragment);
+                if (withChild) {
+                    instance.router.trigger('router:route:before-child-routes', instance, instruction, router);
+
+                    var fullFragment = instruction.fragment;
+                    if (instruction.queryString) {
+                        fullFragment += "?" + instruction.queryString;
                     }
 
-                    if (previousActivation == instance) {
-                        router.attached();
-                        router.compositionComplete();
-                    }
-                } else if(activator.settings.lifecycleData && activator.settings.lifecycleData.redirect){
-                    redirect(activator.settings.lifecycleData.redirect);
-                }else{
-                    cancelNavigation(instance, instruction);
+                    instance.router.loadUrl(fullFragment);
+                }
+
+                if (previousActivation == instance) {
+                    router.attached();
+                    router.compositionComplete();
                 }
 
                 if (startDeferred) {
                     startDeferred.resolve();
                     startDeferred = null;
+                }
+            }, function (error) {
+                if (activator.settings.lifecycleData && activator.settings.lifecycleData.redirect){
+                    redirect(activator.settings.lifecycleData.redirect);
+                } else {
+                    cancelNavigation(instance, instruction);
                 }
             }).fail(function(err){
                 system.error(err);
@@ -469,7 +469,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                 if (!config.viewUrl) {
                     config.moduleId = config.moduleId || router.convertRouteToModuleId(config.route);
                 }
-                
+
                 config.hash = config.hash || router.convertRouteToHash(config.route);
 
                 if (config.hasChildRoutes) {
@@ -644,8 +644,8 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
             } else {
                 document.title = value;
             }
-        }  
-        
+        }
+
         // Allow observable to be used for app.title
         if(ko.isObservable(app.title)) {
             app.title.subscribe(function () {
@@ -654,7 +654,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                 setTitle(title);
             });
         }
-        
+
         /**
          * Updates the document title based on the activated module instance, the routing instruction and the app.title.
          * @method updateDocumentTitle
@@ -664,7 +664,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
         router.updateDocumentTitle = function (instance, instruction) {
             var appTitle = ko.unwrap(app.title),
                 title = instruction.config.title;
-                
+
             if (titleSubscription) {
                 titleSubscription.dispose();
             }
