@@ -203,7 +203,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                         if (settings.interpretResponse(result)){
                             dfd.resolve(settings.interpretResponse(result));
                         } else {
-                            dfd.reject(setTimeout.interpretResponse(result));
+                            dfd.reject(settings.interpretResponse(result));
                         }
                     }, function (reason) {
                         system.log('ERROR: ' + reason.message, reason);
@@ -214,7 +214,7 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                     if (settings.interpretResponse(resultOrPromise)){
                         dfd.resolve(settings.interpretResponse(resultOrPromise));
                     } else {
-                        dfd.reject(setTimeout.interpretResponse(resultOrPromise));
+                        dfd.reject(settings.interpretResponse(resultOrPromise));
                     }
                 }
             } else {
