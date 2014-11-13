@@ -334,6 +334,10 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
                 } else {
                     cancelNavigation(instance, instruction, error);
                 }
+                if (startDeferred) {
+                    startDeferred.resolve();
+                    startDeferred = null;
+                }
             });
         }
 
