@@ -143,14 +143,22 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                     if (resultOrPromise.then) {
                         resultOrPromise.then(function (result) {
                             settings.lifecycleData = result;
-                            dfd.resolve(settings.interpretResponse(result));
+                            if (settings.interpretResponse(result)){
+                                dfd.resolve(settings.interpretResponse(result));
+                            } else {
+                                dfd.reject(settings.interpretResponse(result));
+                            }
                         }, function (reason) {
                             system.log('ERROR: ' + reason.message, reason);
                             dfd.reject(reason);
                         });
                     } else {
                         settings.lifecycleData = resultOrPromise;
-                        dfd.resolve(settings.interpretResponse(resultOrPromise));
+                        if (settings.interpretResponse(resultOrPromise)){
+                            dfd.resolve(settings.interpretResponse(resultOrPromise));
+                        } else {
+                            dfd.reject(settings.interpretResponse(resultOrPromise));
+                        }
                     }
                 } else {
                     dfd.resolve();
@@ -192,14 +200,22 @@ define(['durandal/system', 'knockout'], function (system, ko) {
                 if (resultOrPromise.then) {
                     resultOrPromise.then(function(result) {
                         settings.lifecycleData = result;
-                        dfd.resolve(settings.interpretResponse(result));
+                        if (settings.interpretResponse(result)){
+                            dfd.resolve(settings.interpretResponse(result));
+                        } else {
+                            dfd.reject(setTimeout.interpretResponse(result));
+                        }
                     }, function (reason) {
                         system.log('ERROR: ' + reason.message, reason);
                         dfd.reject(reason);
                     });
                 } else {
                     settings.lifecycleData = resultOrPromise;
-                    dfd.resolve(settings.interpretResponse(resultOrPromise));
+                    if (settings.interpretResponse(resultOrPromise)){
+                        dfd.resolve(settings.interpretResponse(resultOrPromise));
+                    } else {
+                        dfd.reject(setTimeout.interpretResponse(resultOrPromise));
+                    }
                 }
             } else {
                 dfd.resolve();
